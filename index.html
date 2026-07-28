@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>老後資金いくら足りない？診断</title>
+<meta name="description" content="老後資金がいくら足りないか、毎月いくら積み立てればいいかが3ステップでわかる無料の診断ツールです。">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="老後資金いくら足りない？診断">
+<meta property="og:description" content="老後資金がいくら足りないか、毎月いくら積み立てればいいかが3ステップでわかる無料の診断ツールです。">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%92%B0</text></svg>">
+<style>html,body{margin:0;padding:0;}</style>
+</head>
+<body>
+<style>
+/* 金融庁シミュレーターに揃えた「白地の公的ツール」的な見え方に統一するため、
+   ダークテーマは意図的に採用せず、トークンを .app に閉じて常にライトで描画する */
+.app{
+  color-scheme: light;
+  --surface-1:#ffffff;
+  --page:#f4f7fb;
+  --text-primary:#0b0b0b;
+  --text-secondary:#52514e;
+  --muted:#767570;
+  --grid:#e6e9ef;
+  --baseline:#c3c2b7;
+  --border:rgba(11,11,11,0.10);
+  --series-1:#2a78d6;   /* 積立元本 */
+  --series-2:#eb6834;   /* 運用でふえる分 */
+  --accent:#1b5fb0;
+  --accent-soft:#eaf2fd;
+  --good:#006300;
+  --radius:14px;
+
+  min-height:100vh;
+  background:var(--page);
+  color:var(--text-primary);
+  font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;
+  line-height:1.7;
+  -webkit-text-size-adjust:100%;
+}
+.app *{box-sizing:border-box;}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 80px;}
+
+/* ---------- ヘッダー ---------- */
+.app-header{background:var(--accent);color:#fff;padding:28px 16px 24px;text-align:center;}
+.app-header h1{margin:0;font-size:25px;font-weight:700;letter-spacing:.02em;}
+.app-header p{margin:8px 0 0;font-size:16px;opacity:.9;}
+
+/* ---------- ステップ表示（進んだところは押して戻れる／上に貼りつく） ---------- */
+.steps{
+  position:sticky;top:0;z-index:20;
+  display:flex;gap:8px;
+  margin:0 -16px 16px;padding:16px 16px 14px;
+  background:var(--page);
+}
+.steps button{
+  flex:1;text-align:center;font-size:14px;padding:9px 4px;border-radius:999px;
+  background:#e4e8ee;color:var(--muted);font-weight:600;
+  border:1.5px solid transparent;font-family:inherit;cursor:default;
+}
+.steps button.done{background:#fff;border-color:var(--accent);color:var(--accent);cursor:pointer;}
+.steps button.done:hover{background:var(--accent-soft);}
+.steps button.on{background:var(--accent);border-color:var(--accent);color:#fff;cursor:default;}
+.steps button:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ---------- カード ---------- */
+.card{
+  background:var(--surface-1);border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px 20px;margin-bottom:16px;
+}
+.app h2{font-size:21px;margin:0 0 4px;}
+.lead{font-size:16px;color:var(--text-secondary);margin:0 0 20px;}
+
+/* ---------- 戻るリンク（カードの一番上） ---------- */
+.back{
+  background:none;border:0;font-family:inherit;font-size:15px;color:var(--accent);
+  cursor:pointer;padding:0;margin:0 0 16px;display:inline-block;font-weight:600;
+}
+.back:hover{text-decoration:underline;}
+.back:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ---------- コース選択 ---------- */
+.course{
+  display:block;width:100%;text-align:left;cursor:pointer;
+  background:var(--surface-1);border:2px solid #dfe4ec;border-radius:var(--radius);
+  padding:20px;margin-bottom:12px;transition:.15s;font-family:inherit;line-height:1.7;color:inherit;
+}
+.course:hover{border-color:var(--accent);background:var(--accent-soft);}
+.course:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.course .ttl{font-size:20px;font-weight:700;margin-bottom:4px;}
+.course .sub{font-size:15px;color:var(--text-secondary);line-height:1.6;}
+.course .tag{
+  display:inline-block;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;
+  background:var(--accent-soft);color:var(--accent);margin-bottom:8px;
+}
+.course .now{
+  display:inline-block;font-size:13px;font-weight:700;padding:3px 10px;border-radius:999px;
+  background:var(--accent);color:#fff;margin:0 0 8px 6px;
+}
+
+/* ---------- 入力 ---------- */
+.field{margin-bottom:26px;}
+.field label{display:block;font-size:17px;font-weight:700;margin-bottom:2px;}
+.field .help{font-size:14.5px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
+.row{display:flex;align-items:center;gap:12px;}
+.app input[type=range]{flex:1;accent-color:var(--accent);height:28px;min-width:0;}
+.numbox{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.app input[type=number]{
+  width:100px;padding:8px 10px;font-size:18px;text-align:right;
+  border:1px solid #cfd6e0;border-radius:8px;font-family:inherit;background:#fff;color:inherit;
+}
+.app input:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.unit{font-size:16px;color:var(--text-secondary);}
+
+.choice{display:flex;gap:10px;}
+.choice button{
+  flex:1;padding:14px;font-size:17px;font-weight:700;font-family:inherit;cursor:pointer;
+  background:#fff;border:2px solid #dfe4ec;border-radius:10px;color:var(--text-secondary);
+}
+.choice button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
+.choice button:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+.btn{
+  display:block;width:100%;padding:16px;font-size:19px;font-weight:700;font-family:inherit;
+  background:var(--accent);color:#fff;border:0;border-radius:10px;cursor:pointer;
+}
+.btn:hover{background:#164e91;}
+.btn-ghost{
+  display:block;width:100%;padding:12px;margin-top:10px;font-size:16px;font-family:inherit;
+  background:transparent;color:var(--text-secondary);border:0;cursor:pointer;text-decoration:underline;
+}
+.btn:focus-visible,.btn-ghost:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ---------- 結果 ---------- */
+.result-head{text-align:center;padding:8px 0 4px;}
+.result-head .cap{font-size:16px;color:var(--text-secondary);margin:0;}
+.hero{font-size:52px;font-weight:700;line-height:1.15;margin:6px 0 2px;color:var(--series-2);}
+.hero.ok{color:var(--good);}
+.hero small{font-size:24px;font-weight:700;margin-left:2px;}
+.hero-note{font-size:15px;color:var(--muted);margin:0;}
+
+.divider{height:1px;background:var(--grid);margin:24px 0;}
+
+.hero2{font-size:44px;font-weight:700;line-height:1.15;margin:6px 0 2px;color:var(--accent);}
+.hero2 small{font-size:22px;font-weight:700;margin-left:2px;}
+
+/* 内訳 */
+.breakdown{font-size:16px;}
+.breakdown h3{font-size:15px;margin:0 0 10px;color:var(--text-secondary);}
+.breakdown table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;}
+.breakdown td{padding:7px 0;border-bottom:1px solid var(--grid);}
+.breakdown td:last-child{text-align:right;white-space:nowrap;}
+.breakdown tr.total td{font-weight:700;border-bottom:2px solid var(--baseline);}
+.breakdown tr.sub td{color:var(--text-secondary);font-size:15px;}
+
+/* グラフ */
+.chart-wrap{position:relative;margin-top:8px;}
+.legend{display:flex;gap:16px;font-size:14px;color:var(--text-secondary);margin-bottom:10px;flex-wrap:wrap;}
+.legend span{display:flex;align-items:center;gap:6px;}
+.swatch{width:12px;height:12px;border-radius:3px;display:inline-block;flex-shrink:0;}
+.app svg{display:block;width:100%;height:auto;}
+.tip{
+  position:absolute;pointer-events:none;background:#fff;border:1px solid var(--border);
+  border-radius:8px;padding:8px 10px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.10);
+  white-space:nowrap;opacity:0;transition:opacity .1s;font-variant-numeric:tabular-nums;
+}
+.tip b{display:block;margin-bottom:3px;font-size:13px;color:var(--text-secondary);font-weight:600;}
+.tip .li{display:flex;align-items:center;gap:6px;}
+
+/* 表 */
+.app details{margin-top:14px;font-size:15px;}
+.app summary{cursor:pointer;color:var(--accent);}
+.tbl-scroll{overflow-x:auto;}
+.tbl{width:100%;border-collapse:collapse;margin-top:10px;font-variant-numeric:tabular-nums;}
+.tbl th,.tbl td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:right;font-size:14px;white-space:nowrap;}
+.tbl th:first-child,.tbl td:first-child{text-align:left;}
+.tbl th{color:var(--text-secondary);font-weight:600;}
+
+/* CTA */
+.cta{
+  background:linear-gradient(160deg,#1b5fb0,#123f78);color:#fff;border-radius:var(--radius);
+  padding:26px 20px;text-align:center;margin-top:24px;
+}
+.cta h3{margin:0 0 8px;font-size:21px;}
+.cta p{margin:0 0 18px;font-size:16px;opacity:.92;line-height:1.7;}
+.cta a{
+  display:block;padding:15px;border-radius:10px;background:#fff;color:var(--accent);
+  font-weight:700;text-decoration:none;font-size:18px;
+}
+.cta .stub{font-size:12.5px;opacity:.75;margin:10px 0 0;}
+
+.source{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.6;}
+/* 表示/非表示の切り替え用。.course .now などより優先させたいので !important を付ける */
+.app .hidden{display:none !important;}
+@media(prefers-reduced-motion:reduce){.app *{transition:none !important;}}
+@media(max-width:420px){
+  .hero{font-size:42px;} .hero2{font-size:36px;}
+  .app input[type=number]{width:88px;}
+  .steps button{font-size:12.5px;padding:9px 2px;}
+}
+</style>
+
+<div class="app">
+
+<div class="app-header">
+  <h1>老後資金、いくら足りない？</h1>
+  <p>3つのステップで、毎月いくら積み立てればいいかがわかります</p>
+</div>
+
+<div class="wrap">
+
+  <!-- 進んだステップは押して戻れる。上に貼りつくので、どこまでスクロールしても届く -->
+  <nav class="steps" aria-label="ステップ">
+    <button id="st1" onclick="goStep(1)">1. コースを選ぶ</button>
+    <button id="st2" onclick="goStep(2)">2. 数字を入れる</button>
+    <button id="st3" onclick="goStep(3)">3. 結果を見る</button>
+  </nav>
+
+  <!-- ===== STEP 1 ===== -->
+  <section id="step1" class="card">
+    <h2>どちらの老後を想定しますか？</h2>
+    <p class="lead">選んだコースによって、入力する項目が変わります。</p>
+
+    <button class="course" onclick="pickCourse('A')">
+      <span class="tag">じぶんの数字で計算</span><span class="now hidden" id="nowA">選択中</span>
+      <div class="ttl">最低限コース</div>
+      <div class="sub">「毎月これくらいで暮らせればいい」という金額を自分で入れて、足りない分を出します。</div>
+    </button>
+
+    <button class="course" onclick="pickCourse('B')">
+      <span class="tag">かんたん・3項目だけ</span><span class="now hidden" id="nowB">選択中</span>
+      <div class="ttl">ゆとりコース</div>
+      <div class="sub">旅行や趣味も楽しめる「ゆとりある老後」の一般的な必要額をもとに、足りない分を出します。</div>
+    </button>
+  </section>
+
+  <!-- ===== STEP 2 ===== -->
+  <section id="step2" class="card hidden">
+    <button class="back" onclick="goStep(1)">← コース選択にもどる</button>
+    <h2 id="step2title">数字を入れてください</h2>
+    <p class="lead">だいたいで大丈夫です。あとから何度でも変えられます。</p>
+
+    <div class="field">
+      <label for="age">いまの年齢</label>
+      <div class="help">65歳まで積み立てる前提で計算します。</div>
+      <div class="row">
+        <input type="range" id="ageR" min="20" max="80" step="1" value="40" aria-label="いまの年齢（スライダー）">
+        <div class="numbox"><input type="number" id="age" min="20" max="80" step="1" value="40"><span class="unit">歳</span></div>
+      </div>
+    </div>
+
+    <div class="field aOnly hidden" id="f-spend">
+      <label for="spend">老後の生活費（1ヶ月あたり）</label>
+      <div class="help">家賃・食費・光熱費など、毎月かならずかかるお金。年金などの収入は、あとで自動的に差し引きます。</div>
+      <div class="row">
+        <input type="range" id="spendR" min="10" max="60" step="1" value="25" aria-label="老後の生活費（スライダー）">
+        <div class="numbox"><input type="number" id="spend" min="0" max="200" step="1" value="25"><span class="unit">万円</span></div>
+      </div>
+    </div>
+
+    <div class="field aOnly hidden" id="f-extra">
+      <label for="extra">たまにかかる出費（1ヶ月あたりに直した金額）</label>
+      <div class="help">車検代・家電の買い替え・旅行など、毎月ではないけどかかるお金。<br>例）車検10万円が2年に1回 → 10万円 ÷ 24ヶ月 ＝ 約0.4万円</div>
+      <div class="row">
+        <input type="range" id="extraR" min="0" max="20" step="0.5" value="3" aria-label="たまにかかる出費（スライダー）">
+        <div class="numbox"><input type="number" id="extra" min="0" max="50" step="0.5" value="3"><span class="unit">万円</span></div>
+      </div>
+    </div>
+
+    <div class="field bOnly hidden" id="f-house">
+      <label>老後の暮らし方</label>
+      <div class="help">おひとりか、ご夫婦かで必要な金額が変わります。</div>
+      <div class="choice">
+        <button id="h1" onclick="setHouse(1)">一人暮らし</button>
+        <button id="h2" class="on" onclick="setHouse(2)">二人暮らし</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="asset">いま持っている貯金・投資のお金</label>
+      <div class="help">預金・投資信託・株など、老後に使えるお金の合計。</div>
+      <div class="row">
+        <input type="range" id="assetR" min="0" max="5000" step="50" value="300" aria-label="いま持っているお金（スライダー）">
+        <div class="numbox"><input type="number" id="asset" min="0" max="50000" step="50" value="300"><span class="unit">万円</span></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="taishoku">退職金の見込み</label>
+      <div class="help">もらえる予定がなければ 0 のままでOKです。</div>
+      <div class="row">
+        <input type="range" id="taishokuR" min="0" max="5000" step="50" value="1000" aria-label="退職金の見込み（スライダー）">
+        <div class="numbox"><input type="number" id="taishoku" min="0" max="50000" step="50" value="1000"><span class="unit">万円</span></div>
+      </div>
+    </div>
+
+    <button class="btn" onclick="showResult()">診断する</button>
+  </section>
+
+  <!-- ===== STEP 3 ===== -->
+  <section id="step3" class="hidden">
+
+    <div class="card">
+      <button class="back" onclick="goStep(2)">← 数字を入れなおす</button>
+
+      <div class="result-head">
+        <p class="cap" id="cap1">65歳までに準備したい金額（足りない分）</p>
+        <p class="hero" id="heroGap">—</p>
+        <p class="hero-note" id="gapNote">いまの貯金と退職金では、これだけ足りません</p>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="result-head">
+        <p class="cap" id="cap2">そのために必要な、毎月の積立額</p>
+        <p class="hero2" id="heroMonthly">—</p>
+        <p class="hero-note" id="monthlyNote">—</p>
+      </div>
+
+      <div class="field" id="rateField" style="margin:26px 0 0;">
+        <label for="rate">運用の利回りを変えてみる</label>
+        <div class="help">スライダーを動かすと、上の毎月の積立額がその場で変わります。</div>
+        <div class="row">
+          <input type="range" id="rateR" min="0" max="10" step="0.5" value="5" aria-label="運用の利回り（スライダー）">
+          <div class="numbox"><input type="number" id="rate" min="0" max="10" step="0.5" value="5"><span class="unit">%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="chartCard">
+      <h2>お金がふえていくイメージ</h2>
+      <p class="lead" id="chartLead">毎月コツコツ積み立てた場合、65歳までにこう増えていきます。</p>
+      <div class="legend">
+        <span><i class="swatch" style="background:#2a78d6"></i>自分で積み立てたお金</span>
+        <span><i class="swatch" style="background:#eb6834"></i>運用でふえたお金</span>
+      </div>
+      <div class="chart-wrap">
+        <svg id="chart" viewBox="0 0 640 300" role="img" aria-label="65歳までの資産推移グラフ"></svg>
+        <div class="tip" id="tip"></div>
+      </div>
+      <details>
+        <summary>数字を表で見る</summary>
+        <div class="tbl-scroll"><table class="tbl" id="tbl"></table></div>
+      </details>
+    </div>
+
+    <div class="card breakdown">
+      <h3>計算の内訳</h3>
+      <table id="bd"></table>
+      <p class="source" id="source"></p>
+    </div>
+
+    <div class="cta">
+      <h3>足りない分、どう埋めますか？</h3>
+      <p>「毎月この金額は無理かも…」という方へ。<br>あなたの状況に合わせた具体的なプランをご案内します。</p>
+      <a href="#" onclick="alert('※これは仮ボタンです。リンク先が決まったら差し替えます。');return false;">無料で相談してみる</a>
+      <p class="stub">※ 仮ボタン（リンク先は未設定）</p>
+    </div>
+
+    <button class="btn-ghost" onclick="goStep(2)">← 数字を入れなおす</button>
+    <button class="btn-ghost" onclick="goStep(1)">← コースを選びなおす</button>
+  </section>
+
+</div>
+</div>
+
+<script>
+/* ============ 設定値 ============ */
+const RETIRE_AGE   = 65;   // 老後スタート＝積立終了
+const PREP_YEARS   = 25;   // 65〜90歳
+const EXTRA_YEARS  = 20;   // 予備費に掛ける年数
+const PENSION      = 20;   // 老後の月間収入（万円）
+const YUTORI       = {1:4860, 2:6540};  // ゆとりコース固定値（万円）
+
+let course  = null;   // まだコース未選択
+let house   = 2;
+let step    = 1;
+let reached = 1;      // ここまで進んだ＝ここまでは自由に行き来できる
+
+/* ============ スライダー⇔数値の連動 ============ */
+function link(id){
+  const n = document.getElementById(id), r = document.getElementById(id+'R');
+  n.addEventListener('input', ()=>{ r.value = n.value; recalc(); });
+  r.addEventListener('input', ()=>{ n.value = r.value; recalc(); });
+}
+['age','spend','extra','asset','taishoku','rate'].forEach(link);
+
+const V = id => parseFloat(document.getElementById(id).value) || 0;
+
+/* ============ 画面切替 ============
+   進んだところまでは、上のステップ表示からいつでも行き来できる。
+   入力した数字はそのまま残るので、戻っても入れ直しにはならない。 */
+function goStep(n){
+  if(n > reached) return;
+  step = n;
+  [1,2,3].forEach(i=>{
+    document.getElementById('step'+i).classList.toggle('hidden', i!==n);
+    const chip = document.getElementById('st'+i);
+    chip.classList.toggle('on', i===n);
+    chip.classList.toggle('done', i!==n && i<=reached);
+    chip.disabled = (i > reached || i === n);
+  });
+  if(n===3) recalc();
+  scrollTop();
+}
+function scrollTop(){
+  try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+}
+function pickCourse(c){
+  course = c;
+  reached = Math.max(reached, 2);
+  document.querySelectorAll('.aOnly').forEach(e=>e.classList.toggle('hidden', c!=='A'));
+  document.querySelectorAll('.bOnly').forEach(e=>e.classList.toggle('hidden', c!=='B'));
+  document.getElementById('nowA').classList.toggle('hidden', c!=='A');
+  document.getElementById('nowB').classList.toggle('hidden', c!=='B');
+  document.getElementById('step2title').textContent =
+    c==='A' ? '最低限コース｜数字を入れてください' : 'ゆとりコース｜数字を入れてください';
+  goStep(2);
+}
+function setHouse(h){
+  house = h;
+  document.getElementById('h1').classList.toggle('on', h===1);
+  document.getElementById('h2').classList.toggle('on', h===2);
+}
+/* 表示してから描画する（非表示のままだとSVGの実寸が取れないため） */
+function showResult(){ reached = 3; goStep(3); }
+
+let rzT;
+window.addEventListener('resize', ()=>{
+  clearTimeout(rzT);
+  rzT = setTimeout(()=>{ if(step===3) recalc(); }, 150);
+});
+
+/* ============ 計算 ============ */
+function calc(){
+  const age = V('age'), asset = V('asset'), tai = V('taishoku'), rate = V('rate');
+  let need, parts;
+
+  if(course==='B'){
+    need  = YUTORI[house];
+    parts = {};
+  }else{
+    const monthlyGap = V('spend') - PENSION;                    // 月の不足（万円）
+    const living     = monthlyGap * 12 * PREP_YEARS;
+    const extra      = V('extra') * 12 * EXTRA_YEARS;
+    need  = living + extra;
+    parts = {monthlyGap, living, extra};
+  }
+
+  const gap    = need - asset - tai;                            // 不足額（万円）
+  const months = Math.max(0, (RETIRE_AGE - age) * 12);
+  const i      = rate / 100 / 12;
+
+  let monthly = null;
+  if(gap > 0 && months > 0){
+    monthly = (i === 0) ? gap / months : gap * i / (Math.pow(1+i, months) - 1);
+  }
+  return {age, asset, tai, rate, need, gap, months, i, monthly, parts};
+}
+
+/* ============ 表示フォーマット ============ */
+const man = v => Math.round(v).toLocaleString('ja-JP');                 // 万円
+const yen = v => (Math.round(v*10000/100)*100).toLocaleString('ja-JP'); // 万円→円（100円単位）
+
+/* ============ 再計算＆描画 ============ */
+function recalc(){
+  if(step !== 3) return;   // 結果画面を見ていないときは計算しない
+  const d = calc();
+  const heroGap = document.getElementById('heroGap');
+  const gapNote = document.getElementById('gapNote');
+  const heroM   = document.getElementById('heroMonthly');
+  const noteM   = document.getElementById('monthlyNote');
+
+  const canSave = d.gap > 0 && d.months > 0;   // 積立額を出せるか
+
+  /* --- 不足額 --- */
+  if(d.gap <= 0){
+    document.getElementById('cap1').textContent = '老後資金の準備状況';
+    heroGap.className = 'hero ok';
+    heroGap.innerHTML = '達成ずみ 🎉';
+    gapNote.textContent = `いまの資産と退職金で、必要額を ${man(-d.gap)}万円 上回っています。`;
+  }else{
+    document.getElementById('cap1').textContent =
+      d.months > 0 ? '65歳までに準備したい金額（足りない分）' : '老後資金の足りない金額';
+    heroGap.className = 'hero';
+    heroGap.innerHTML = man(d.gap) + '<small>万円</small>';
+    gapNote.textContent = `必要な ${man(d.need)}万円 のうち、いまの資産＋退職金（${man(d.asset+d.tai)}万円）では足りない分です。`;
+  }
+
+  /* --- 毎月の積立額 --- */
+  const cap2 = document.getElementById('cap2');
+  if(d.gap <= 0){
+    cap2.textContent = '毎月の積立額';
+    heroM.innerHTML = '0<small>円</small>';
+    noteM.textContent = 'いまのままでも計算上は足ります。';
+  }else if(d.months <= 0){
+    cap2.textContent = '毎月の積立額';
+    heroM.innerHTML = '—';
+    noteM.textContent = 'すでに65歳を超えているため、積立での計算はできません。';
+  }else{
+    cap2.textContent = 'そのために必要な、毎月の積立額';
+    heroM.innerHTML = yen(d.monthly) + '<small>円</small>';
+    noteM.textContent = `年利${d.rate}%で運用しながら、${d.months/12}年間（${d.age}歳→65歳）積み立てた場合`;
+  }
+
+  /* 積立が発生しないケースでは、利回りスライダーとグラフを隠す */
+  document.getElementById('rateField').classList.toggle('hidden', !canSave);
+  document.getElementById('chartCard').classList.toggle('hidden', !canSave);
+
+  drawChart(d);
+  drawBreakdown(d);
+}
+
+/* ============ 内訳テーブル ============ */
+function drawBreakdown(d){
+  const bd = document.getElementById('bd');
+  let rows = '';
+  if(course==='B'){
+    rows += `<tr><td>ゆとりある老後に必要なお金（${house===1?'一人暮らし':'二人暮らし'}・65〜90歳）</td><td>${man(d.need)}万円</td></tr>`;
+  }else{
+    const p = d.parts;
+    rows += `<tr><td>毎月の生活費のうち、年金でまかなえない分<br><span style="color:var(--muted);font-size:13px">（${man(V('spend'))}万円 − 年金など ${PENSION}万円）</span></td><td>${p.monthlyGap>=0?'':'−'}${man(Math.abs(p.monthlyGap))}万円 / 月</td></tr>`;
+    rows += `<tr class="sub"><td>　↑ を 25年分（65〜90歳）</td><td>${man(p.living)}万円</td></tr>`;
+    rows += `<tr class="sub"><td>たまにかかる出費 ${V('extra')}万円 × 20年分</td><td>${man(p.extra)}万円</td></tr>`;
+    rows += `<tr class="total"><td>老後に必要なお金の合計</td><td>${man(d.need)}万円</td></tr>`;
+  }
+  rows += `<tr class="sub"><td>− いま持っているお金</td><td>${man(d.asset)}万円</td></tr>`;
+  rows += `<tr class="sub"><td>− 退職金の見込み</td><td>${man(d.tai)}万円</td></tr>`;
+  rows += `<tr class="total"><td>${d.gap>0?'足りない金額':'余る金額'}</td><td>${man(Math.abs(d.gap))}万円</td></tr>`;
+  bd.innerHTML = rows;
+
+  document.getElementById('source').textContent = course==='B'
+    ? '※根拠：ゆとりある老後生活費の調査データにもとづく固定値（一人暮らし4,860万円／二人暮らし6,540万円）。出典は公開時に明記します。'
+    : '※ 老後の収入（年金など）は月20万円、老後期間は65〜90歳の25年間として計算しています。';
+}
+
+/* ============ グラフ ============ */
+const S1='#2a78d6', S2='#eb6834', SURF='#ffffff';
+let chartPts = [];
+
+function drawChart(d){
+  const svg = document.getElementById('chart');
+  const lead = document.getElementById('chartLead');
+
+  if(!(d.gap > 0 && d.months > 0)){
+    svg.innerHTML = '';
+    chartPts = [];
+    document.getElementById('tbl').innerHTML = '';
+    lead.textContent = d.gap<=0
+      ? '積立が不要なため、グラフは表示していません。'
+      : '積立期間がないため、グラフは表示していません。';
+    return;
+  }
+  lead.textContent = `毎月 ${yen(d.monthly)}円 を年利${d.rate}%で積み立てた場合の増え方です。`;
+
+  /* データ生成：年ごとの 元本 / 評価額 */
+  const pts = [];
+  for(let y=0; y<=d.months/12; y++){
+    const m = y*12;
+    const principal = d.monthly * m;
+    const value = (d.i===0) ? principal : d.monthly * (Math.pow(1+d.i, m)-1) / d.i;
+    pts.push({age:d.age+y, principal, value, profit:value-principal});
+  }
+  chartPts = pts;
+
+  /* スケール：SVGの実寸をそのままviewBoxにして、文字が小さくならないようにする */
+  const W = Math.round(svg.clientWidth) || 640;
+  const H = W < 480 ? 250 : 300;
+  const ml = W < 480 ? 50 : 62, mr = 16, mt = 30, mb = 34;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const maxV = pts[pts.length-1].value;
+  const tick = niceTick(maxV);
+  const top  = Math.ceil(maxV/tick)*tick;
+  const x = i => ml + pw * (i/(pts.length-1));
+  const y = v => mt + ph * (1 - v/top);
+
+  let g='';
+  /* グリッド＋Y軸 */
+  for(let v=0; v<=top+1; v+=tick){
+    g += `<line x1="${ml}" y1="${y(v)}" x2="${W-mr}" y2="${y(v)}" stroke="${v===0?'#c3c2b7':'#e6e9ef'}" stroke-width="1"/>`;
+    g += `<text x="${ml-8}" y="${y(v)+4}" text-anchor="end" font-size="12.5" fill="#767570" style="font-variant-numeric:tabular-nums">${man(v)}</text>`;
+  }
+  g += `<text x="${ml-8}" y="12" text-anchor="end" font-size="11.5" fill="#767570">万円</text>`;
+
+  /* X軸ラベル（最初・最後を必ず入れ、近すぎるものは間引く） */
+  const n = pts.length-1;
+  const st = Math.max(1, Math.round(n/4));
+  const idxs = [];
+  for(let i=0;i<=n;i+=st) idxs.push(i);
+  if(idxs[idxs.length-1] !== n){
+    if(n - idxs[idxs.length-1] < st*0.6) idxs.pop();
+    idxs.push(n);
+  }
+  idxs.forEach(i=>{
+    g += `<text x="${x(i)}" y="${H-12}" text-anchor="middle" font-size="12.5" fill="#767570">${pts[i].age}歳</text>`;
+  });
+
+  /* 面（積み上げ）：元本 → 合計 */
+  const path = (key,base) => {
+    let up = pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
+    let dn = base
+      ? pts.slice().reverse().map((p,i)=>`L${x(pts.length-1-i).toFixed(1)},${y(p[base]).toFixed(1)}`).join('')
+      : `L${x(pts.length-1).toFixed(1)},${y(0)}L${ml},${y(0)}`;
+    return up+dn+'Z';
+  };
+  g += `<path d="${path('value','principal')}" fill="${S2}" fill-opacity="0.18"/>`;
+  g += `<path d="${path('principal',null)}" fill="${S1}" fill-opacity="0.18"/>`;
+  /* 線（2px・重なりは背景色の縁取りで分離） */
+  const line = key => pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p[key]).toFixed(1)}`).join('');
+  g += `<path d="${line('value')}" fill="none" stroke="${SURF}" stroke-width="6" stroke-linejoin="round"/>`;
+  g += `<path d="${line('value')}" fill="none" stroke="${S2}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  g += `<path d="${line('principal')}" fill="none" stroke="${SURF}" stroke-width="6" stroke-linejoin="round"/>`;
+  g += `<path d="${line('principal')}" fill="none" stroke="${S1}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+  /* 終点マーカー */
+  const last = pts[pts.length-1];
+  g += `<circle cx="${x(pts.length-1)}" cy="${y(last.value)}" r="5" fill="${S2}" stroke="${SURF}" stroke-width="2"/>`;
+  g += `<circle cx="${x(pts.length-1)}" cy="${y(last.principal)}" r="5" fill="${S1}" stroke="${SURF}" stroke-width="2"/>`;
+
+  /* ホバー用 */
+  g += `<line id="cross" x1="0" y1="${mt}" x2="0" y2="${mt+ph}" stroke="#c3c2b7" stroke-width="1" opacity="0"/>`;
+  g += `<rect id="hit" x="${ml}" y="${mt}" width="${pw}" height="${ph}" fill="transparent"/>`;
+
+  svg.innerHTML = g;
+  svg._geo = {ml,pw,mt,ph,W,x,y};
+  svg.style.height = H + 'px';
+  bindHover(svg);
+  drawTable(pts);
+}
+
+function niceTick(max){
+  const raw = max/4;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw/pow;
+  return (n<=1?1:n<=2?2:n<=5?5:10)*pow;
+}
+
+function bindHover(svg){
+  const tip = document.getElementById('tip');
+  const cross = svg.querySelector('#cross');
+  const move = e=>{
+    const r = svg.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const {ml,pw,W} = svg._geo;
+    const sx = (cx - r.left) / r.width * W;
+    let idx = Math.round((sx-ml)/pw*(chartPts.length-1));
+    idx = Math.max(0, Math.min(chartPts.length-1, idx));
+    const p = chartPts[idx];
+    cross.setAttribute('x1', svg._geo.x(idx)); cross.setAttribute('x2', svg._geo.x(idx));
+    cross.setAttribute('opacity','1');
+    tip.innerHTML =
+      `<b>${p.age}歳の時点</b>`+
+      `<div class="li"><i class="swatch" style="background:${S1}"></i>積み立てたお金　${man(p.principal)}万円</div>`+
+      `<div class="li"><i class="swatch" style="background:${S2}"></i>運用でふえた分　${man(p.profit)}万円</div>`+
+      `<div class="li" style="margin-top:4px;font-weight:700">合計　${man(p.value)}万円</div>`;
+    tip.style.opacity = 1;
+    const px = svg._geo.x(idx)/W*r.width;
+    tip.style.left = Math.max(0, Math.min(px-100, r.width-210))+'px';
+    tip.style.top = '10px';
+  };
+  svg.addEventListener('mousemove', move);
+  svg.addEventListener('touchmove', e=>{move(e);e.preventDefault();}, {passive:false});
+  svg.addEventListener('mouseleave', ()=>{tip.style.opacity=0;cross.setAttribute('opacity','0');});
+}
+
+function drawTable(pts){
+  let h = '<tr><th>年齢</th><th>積み立てたお金</th><th>運用でふえた分</th><th>合計</th></tr>';
+  pts.forEach(p=>{
+    h += `<tr><td>${p.age}歳</td><td>${man(p.principal)}万円</td><td>${man(p.profit)}万円</td><td>${man(p.value)}万円</td></tr>`;
+  });
+  document.getElementById('tbl').innerHTML = h;
+}
+
+goStep(1);
+</script>
+</body>
+</html>
