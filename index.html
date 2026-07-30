@@ -504,9 +504,14 @@ function drawBreakdown(d){
   rows += `<tr class="total"><td>${p.gap>0?'足りない金額':'余る金額'}</td><td>${man(Math.abs(p.gap))}万円</td></tr>`;
   document.getElementById('bd').innerHTML = rows;
 
-  document.getElementById('source').textContent = plan==='yutori'
+  /* 注記。65歳より前に働き終える人にだけ、空白期間の注記を足す */
+  const notes = [ plan==='yutori'
     ? '※根拠：ゆとりある老後生活費の調査データにもとづく固定値（一人暮らし4,860万円／二人暮らし6,540万円）。出典は公開時に明記します。'
-    : '※ 老後の収入（年金など）は月20万円、老後期間は65〜90歳として計算しています。';
+    : '※ 老後の収入（年金など）は月20万円、老後期間は65〜90歳として計算しています。' ];
+  if(d.retire < PENSION_AGE){
+    notes.push(`※ 年金を受け取れるのは65歳からのため、${d.retire}歳〜65歳の生活費はこの金額に含まれていません。`);
+  }
+  document.getElementById('source').innerHTML = notes.map(t=>`<span style="display:block">${t}</span>`).join('');
 }
 
 /* ============ グラフ ============ */
