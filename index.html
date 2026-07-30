@@ -236,6 +236,15 @@
       </div>
     </div>
 
+    <!-- 年収は計算には使わない。統計を取るためだけの項目 -->
+    <div class="field">
+      <label for="income">いまの年収（税込み）</label>
+      <div class="row">
+        <input type="range" id="incomeR" min="0" max="2000" step="10" value="500" aria-label="いまの年収（スライダー）">
+        <div class="numbox"><input type="number" id="income" min="0" max="20000" step="10" value="500"><span class="unit">万円</span></div>
+      </div>
+    </div>
+
     <div class="field">
       <label>老後の暮らし方</label>
       <div class="choice">
@@ -383,7 +392,7 @@ function link(id){
   n.addEventListener('input', ()=>{ r.value = n.value; onInput(id); });
   r.addEventListener('input', ()=>{ n.value = r.value; onInput(id); });
 }
-['age','retire','spend','extra','asset','taishoku','rate'].forEach(link);
+['age','retire','income','spend','extra','asset','taishoku','rate'].forEach(link);
 
 const V = id => parseFloat(document.getElementById(id).value) || 0;
 
@@ -444,7 +453,8 @@ const LOG_FIELDS = {
   gapMin:   'entry.1286387535',
   gapYut:   'entry.799794714',
   src:      'entry.218670221',
-  device:   'entry.1103356335'
+  device:   'entry.1103356335',
+  income:   'entry.1538740312'   /* 12. 年収（計算には使わない・統計用） */
 };
 let logged = false;
 
@@ -455,7 +465,7 @@ function logResult(){
     const d = calc();
     const q = new URLSearchParams(location.search);
     const v = {
-      age: d.age, retire: d.retire, house: house,
+      age: d.age, retire: d.retire, house: house, income: V('income'),
       spend: V('spend'), extra: V('extra'), asset: d.asset, taishoku: d.tai,
       gapMin: Math.round(d.min.gap), gapYut: Math.round(d.yutori.gap),
       src: q.get('src') || q.get('utm_source') || 'direct',
