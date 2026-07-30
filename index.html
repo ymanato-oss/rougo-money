@@ -180,6 +180,10 @@
   font-weight:700;text-decoration:none;font-size:18px;
 }
 .cta .stub{font-size:12.5px;opacity:.75;margin:10px 0 0;}
+.cta .soon{
+  margin:0;font-size:16px;line-height:1.7;opacity:.95;
+  padding:14px;border:1px dashed rgba(255,255,255,.45);border-radius:10px;
+}
 
 .source{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.6;}
 .app .hidden{display:none !important;}
@@ -332,10 +336,11 @@
       <p class="source" id="source"></p>
     </div>
 
+    <!-- CTA。相談窓口が用意できたら、下の <p class="soon"> を
+         <a href="（LINE登録や相談予約のURL）">無料で相談してみる</a> に差し替える -->
     <div class="cta">
       <h3>足りない分、どう埋めますか？</h3>
-      <a href="#" onclick="alert('※これは仮ボタンです。リンク先が決まったら差し替えます。');return false;">無料で相談してみる</a>
-      <p class="stub">※ 仮ボタン（リンク先は未設定）</p>
+      <p class="soon">今後は個別での相談も受けられるように準備中です。</p>
     </div>
 
     <button class="btn-ghost" onclick="goStep(1)">← 数字を入れなおす</button>
@@ -547,7 +552,7 @@ function drawBreakdown(d){
 
   /* 注記。65歳より前に働き終える人にだけ、空白期間の注記を足す */
   const notes = [ plan==='yutori'
-    ? '※根拠：ゆとりある老後生活費の調査データにもとづく固定値（一人暮らし4,860万円／二人暮らし6,540万円）。出典は公開時に明記します。'
+    ? '※ ゆとりある暮らしに必要な額は、一人暮らし4,860万円／二人暮らし6,540万円（65〜90歳）を目安として計算しています。'
     : '※ 老後の収入（年金など）は月20万円、老後期間は65〜90歳として計算しています。' ];
   if(d.retire < PENSION_AGE){
     notes.push(`※ 年金を受け取れるのは65歳からのため、${d.retire}歳〜65歳の生活費はこの金額に含まれていません。`);
