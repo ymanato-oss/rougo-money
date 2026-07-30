@@ -112,6 +112,7 @@
   background:transparent;color:var(--text-secondary);border:0;cursor:pointer;text-decoration:underline;
 }
 .btn:focus-visible,.btn-ghost:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+.privacy{font-size:12.5px;color:var(--muted);margin:12px 0 0;text-align:center;line-height:1.6;}
 
 /* ---------- 結果：2プラン並列 ---------- */
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -268,6 +269,7 @@
     </div>
 
     <button class="btn" onclick="showResult()">診断する</button>
+    <p class="privacy">※ 入力内容は統計目的で記録されます。個人が特定される情報は取得しません。</p>
   </section>
 
   <!-- ===== STEP 2：結果 ===== -->
@@ -405,7 +407,46 @@ function setPlan(p){
   document.getElementById('tabYut').classList.toggle('on', p==='yutori');
   recalc();
 }
-function showResult(){ reached = 2; goStep(2); }
+function showResult(){ reached = 2; goStep(2); logResult(); }
+
+/* ============ 診断結果の記録（統計用） ============
+   Googleフォームの受け口に送るだけ。名前・メールなど個人を特定する情報は送らない。
+   1人1回（最初に「診断する」を押したとき）だけ送る。
+   送信に失敗しても診断の表示は止めない。 */
+const LOG_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdkrxaGk1lwUQpATDSkTUFDsmRB2QvPogC4fAcF_n1Nrz9utg/formResponse';
+const LOG_FIELDS = {
+  age:      'entry.786398006',
+  retire:   'entry.195256671',
+  house:    'entry.1655379541',
+  spend:    'entry.785823105',
+  extra:    'entry.1135259931',
+  asset:    'entry.277059322',
+  taishoku: 'entry.1644346629',
+  gapMin:   'entry.1286387535',
+  gapYut:   'entry.799794714',
+  src:      'entry.218670221',
+  device:   'entry.1103356335'
+};
+let logged = false;
+
+function logResult(){
+  if(logged) return;
+  logged = true;
+  try{
+    const d = calc();
+    const q = new URLSearchParams(location.search);
+    const v = {
+      age: d.age, retire: d.retire, house: house,
+      spend: V('spend'), extra: V('extra'), asset: d.asset, taishoku: d.tai,
+      gapMin: Math.round(d.min.gap), gapYut: Math.round(d.yutori.gap),
+      src: q.get('src') || q.get('utm_source') || 'direct',
+      device: window.innerWidth < 640 ? 'sp' : 'pc'
+    };
+    const body = new URLSearchParams();
+    Object.keys(LOG_FIELDS).forEach(k => body.append(LOG_FIELDS[k], v[k]));
+    fetch(LOG_URL, {method:'POST', mode:'no-cors', keepalive:true, body});
+  }catch(e){ /* 記録に失敗しても診断はそのまま続ける */ }
+}
 
 let rzT;
 window.addEventListener('resize', ()=>{
