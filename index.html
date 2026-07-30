@@ -114,20 +114,23 @@
 .btn:focus-visible,.btn-ghost:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 .privacy{font-size:12.5px;color:var(--muted);margin:12px 0 0;text-align:center;line-height:1.6;}
 
-/* ---------- 結果：2プラン並列 ---------- */
-.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+/* ---------- 結果：3つ並列（合計資産／最低限／ゆとり） ---------- */
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
 .plan{
   border:1px solid var(--border);border-radius:var(--radius);
-  padding:18px 14px;text-align:center;background:var(--surface-1);
+  padding:18px 12px;text-align:center;background:var(--surface-1);
 }
+.plan.asset{background:#f2f7fe;border-color:rgba(42,120,214,.28);}
 .plan.yutori{background:#fbf7f4;border-color:rgba(235,104,52,.25);}
 .plan-ttl{font-size:15px;font-weight:700;margin:0 0 12px;color:var(--text-secondary);}
 .plan-cap{font-size:13px;color:var(--muted);margin:0;}
-.plan-gap{font-size:34px;font-weight:700;line-height:1.15;margin:2px 0 14px;color:var(--series-2);}
-.plan-gap.ok{color:var(--good);font-size:26px;}
-.plan-gap small{font-size:16px;font-weight:700;margin-left:1px;}
-.plan-mon{font-size:30px;font-weight:700;line-height:1.15;margin:2px 0 0;color:var(--accent);}
-.plan-mon small{font-size:15px;font-weight:700;margin-left:1px;}
+.plan-gap{font-size:28px;font-weight:700;line-height:1.15;margin:2px 0 14px;color:var(--series-2);}
+.plan-gap.total{color:var(--accent);}
+.plan-gap.ok{color:var(--good);font-size:22px;}
+.plan-gap small{font-size:15px;font-weight:700;margin-left:1px;}
+.plan-mon{font-size:25px;font-weight:700;line-height:1.15;margin:2px 0 0;color:var(--accent);}
+.plan-mon small{font-size:14px;font-weight:700;margin-left:1px;}
+.plan-note{font-size:12.5px;color:var(--muted);margin:2px 0 0;line-height:1.7;}
 
 /* ---------- 切り替えタブ ---------- */
 .tabs{display:flex;gap:8px;margin:0 0 18px;}
@@ -188,9 +191,10 @@
 .source{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.6;}
 .app .hidden{display:none !important;}
 @media(prefers-reduced-motion:reduce){.app *{transition:none !important;}}
-@media(max-width:560px){
-  .two{grid-template-columns:1fr;}
-  .plan-gap{font-size:40px;} .plan-mon{font-size:34px;}
+@media(max-width:760px){
+  .three{grid-template-columns:1fr;}
+  .plan-gap{font-size:40px;} .plan-gap.ok{font-size:30px;} .plan-mon{font-size:34px;}
+  .plan-gap small{font-size:20px;} .plan-mon small{font-size:18px;}
 }
 @media(max-width:420px){
   .app input[type=number]{width:88px;}
@@ -282,7 +286,13 @@
     <div class="card">
       <button class="back" onclick="goStep(1)">← 数字を入れなおす</button>
 
-      <div class="two">
+      <div class="three">
+        <div class="plan asset">
+          <p class="plan-ttl">合計資産額</p>
+          <p class="plan-cap">退職時に用意できるお金</p>
+          <p class="plan-gap total" id="projTotal">—</p>
+          <p class="plan-note" id="projBreak">—</p>
+        </div>
         <div class="plan">
           <p class="plan-ttl">最低限の暮らし</p>
           <p class="plan-cap">足りない金額</p>
@@ -314,7 +324,7 @@
     </div>
 
     <div class="card" id="chartCard">
-      <h2>お金がふえていくイメージ</h2>
+      <h2>積み立てたお金の増え方</h2>
       <div class="legend">
         <span><i class="swatch" style="background:#2a78d6"></i>自分で積み立てたお金</span>
         <span><i class="swatch" style="background:#eb6834"></i>運用でふえたお金</span>
@@ -481,8 +491,13 @@ function calc(){
   const months = Math.max(0, (retire - age) * 12);   // 積立できる月数
   const i      = rate / 100 / 12;
 
+  /* いまの貯金・投資も同じ利回りで運用する前提。退職金は退職時に受け取る */
+  const grow      = (i === 0 || months === 0) ? 1 : Math.pow(1+i, months);
+  const assetEnd  = asset * grow;          // 退職時点まで運用した貯金（万円）
+  const projected = assetEnd + tai;        // 退職時に用意できる合計資産（万円）
+
   const build = need => {
-    const gap = need - asset - tai;
+    const gap = need - projected;
     let monthly = null;
     if(gap > 0 && months > 0){
       monthly = (i === 0) ? gap / months : gap * i / (Math.pow(1+i, months) - 1);
@@ -492,6 +507,7 @@ function calc(){
 
   return {
     age, retire, asset, tai, rate, months, i,
+    assetEnd, projected,
     parts: {monthlyGap, living, extra},
     min: build(needMin),
     yutori: build(needYut)
@@ -506,6 +522,14 @@ const yen = v => (Math.round(v*10000/100)*100).toLocaleString('ja-JP'); // 万�
 function recalc(){
   if(step !== 2) return;
   const d = calc();
+
+  /* 1つ目のカード：退職時に用意できる合計資産 */
+  document.getElementById('projTotal').innerHTML = man(d.projected) + '<small>万円</small>';
+  /* カードが狭いので、途中で変な折り返しが起きないよう1行ずつに分ける */
+  const brk = [`貯金 ${man(d.asset)}万円`];
+  if(d.assetEnd > d.asset) brk.push(`→ 運用で ${man(d.assetEnd)}万円`);
+  brk.push(`＋ 退職金 ${man(d.tai)}万円`);
+  document.getElementById('projBreak').innerHTML = brk.join('<br>');
 
   paintPlan(d, 'min',    'gapMin', 'monMin');
   paintPlan(d, 'yutori', 'gapYut', 'monYut');
@@ -549,7 +573,7 @@ function drawBreakdown(d){
   }else{
     rows += `<tr><td>ゆとりある老後に必要なお金（${house===1?'一人暮らし':'二人暮らし'}）</td><td>${man(p.need)}万円</td></tr>`;
   }
-  rows += `<tr class="sub"><td>− いまの貯金・投資</td><td>${man(d.asset)}万円</td></tr>`;
+  rows += `<tr class="sub"><td>− いまの貯金・投資 ${man(d.asset)}万円${d.assetEnd>d.asset?`（運用して ${man(d.assetEnd)}万円に）`:''}</td><td>${man(d.assetEnd)}万円</td></tr>`;
   rows += `<tr class="sub"><td>− 退職金の見込み</td><td>${man(d.tai)}万円</td></tr>`;
   rows += `<tr class="total"><td>${p.gap>0?'足りない金額':'余る金額'}</td><td>${man(Math.abs(p.gap))}万円</td></tr>`;
   document.getElementById('bd').innerHTML = rows;
@@ -560,6 +584,9 @@ function drawBreakdown(d){
     '※ 老後の収入（年金など）は月20万円、老後期間は65〜90歳として計算しています。',
     '※ ゆとりある暮らしに必要な額は、一人暮らし4,860万円／二人暮らし6,540万円（65〜90歳）を目安として計算しています。'
   ];
+  if(d.rate > 0 && d.months > 0){
+    notes.push('※ いまの貯金・投資も、同じ利回りで運用し続けた前提で計算しています。');
+  }
   if(d.retire < PENSION_AGE){
     notes.push(`※ 年金を受け取れるのは65歳からのため、${d.retire}歳〜65歳の生活費はこの金額に含まれていません。`);
   }
