@@ -112,7 +112,12 @@
   background:transparent;color:var(--text-secondary);border:0;cursor:pointer;text-decoration:underline;
 }
 .btn:focus-visible,.btn-ghost:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
-.privacy{font-size:12.5px;color:var(--muted);margin:12px 0 0;text-align:center;line-height:1.6;}
+/* 注意書き。主張しすぎないよう小さめ・グレーにするが、
+   読めなくならないよう色は --muted のまま（白背景でコントラスト4.5:1を確保） */
+.privacy{
+  font-size:11.5px;color:var(--muted);margin:10px auto 0;
+  text-align:center;line-height:1.6;max-width:46em;text-wrap:balance;
+}
 
 /* ---------- 結果：3つ並列（合計資産／最低限／ゆとり） ---------- */
 .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
@@ -286,7 +291,7 @@
     </div>
 
     <button class="btn" onclick="showResult()">診断する</button>
-    <p class="privacy">※ 入力内容は今後のサービス向上のために記録されます。</p>
+    <p class="privacy">※入力内容は今後のサービス向上のため記録されますが、個人が特定される情報は取得しません。</p>
   </section>
 
   <!-- ===== STEP 2：結果 ===== -->
